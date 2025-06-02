@@ -41,13 +41,13 @@ The goal is to develop an **IoT-based system** that detects elephants near railw
 - **Data Processing**  
   An ESP32 microcontroller filters false positives and manages data transmission to a cloud platform.
 
-> ⚠️ _Note: Components listed are sample selections and not finalized._
-
 ---
 
 ## 🔧 System Components
 
 ### 🛠️ Hardware
+
+> ⚠️ _Note: Components listed are sample selections and not finalized._
 
 - **PIR Sensor**: e.g., HC-SR501
 - **Accelerometer**: e.g., ADXL345
