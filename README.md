@@ -47,8 +47,6 @@ The goal is to develop an **IoT-based system** that detects elephants near railw
 
 ### 🛠️ Hardware
 
-> ⚠️ _Note: Components listed are sample selections and not finalized._
-
 - **PIR Sensor**: e.g., HC-SR501
 - **Accelerometer**: e.g., ADXL345
 - **Microcontroller**: e.g., ESP32
