@@ -50,7 +50,6 @@ The goal is to develop an **IoT-based system** that detects elephants near railw
 - **PIR Sensor**: e.g., HC-SR501
 - **Accelerometer**: e.g., ADXL345
 - **Microcontroller**: e.g., ESP32
-- **LoRaWAN Module**: e.g., SX1276
 - **GPS Module**: e.g., NEO-6M
 - **Power System**: 10–20W Solar Panel + 3.7V, 2000mAh Li-ion Battery
 - **Enclosure**: Weatherproof box for outdoor deployment
