@@ -2,44 +2,47 @@
 
 ## 🐘 Problem Identification
 
-In Sri Lanka, trains are a key mode of public transportation, often passing through towns and forested areas. A serious issue arises when elephants crossing railway tracks are struck by oncoming trains. These collisions occur frequently due to:
-
-- Elephants' natural movement patterns
-- Trains' inability to stop quickly
-
-This situation endangers the elephant population, disrupts railway operations, and poses serious safety risks for passengers. A real-time detection and alert system is needed to prevent such incidents.
+In Sri Lanka, elephant-train collisions are a recurring issue due to elephants crossing railway lines that intersect their natural habitats. These incidents endanger wildlife, damage infrastructure, and jeopardize human lives. A real-time, energy-efficient, location-aware detection and alert system is needed to mitigate this risk.
 
 ---
 
 ## 🌐 Project Overview
 
-The goal is to develop an **IoT-based system** that detects elephants near railway tracks and sends real-time alerts to train operators. The system includes:
+This project is a solar-powered, IoT-based system designed to detect elephant presence near and on railway tracks. It uses motion and distance sensors, tilt monitoring, and cloud-based alerting to warn train operators and control rooms in real time.
 
-- **PIR sensors** and **accelerometers**
-- **Solar-powered** operation
-- **Location-based** alert messages via **LoRaWAN**
+Key features include:
+
+- Dual-sensor detection (PIR + Ultrasonic) for accurate elephant classification
+- Tower tilt monitoring via tilt sensor
+- Real-time data sync with Firebase via Wi-Fi
+- Unique device ID for map-based identification
+- Solar-powered system with battery backup
+- Weatherproof outdoor deployment
 
 ---
 
 ## ⚙️ Functional Description
 
-- **Elephant Detection**  
-  Uses PIR sensors to detect movement within 20 meters by sensing body heat (infrared changes).
+- 🐘 Elephant Classification
 
-- **Tower Integrity Monitoring**  
-  An accelerometer detects if the tower is damaged or tilted due to elephant activity.
+  - PIR only: Elephant nearby (not on track)
+  - PIR + Ultrasonic: Elephant on track
+  - Ultrasonic only: Ignored (false positive)
 
-- **Location Tracking**  
-  GPS module provides the exact location of the tower for accurate alerts.
+- 📡 Real-Time Alerts  
+  ESP32 pushes data to Firebase when elephant presence is detected.
 
-- **Real-Time Alerts**  
-  Alerts are sent via LoRaWAN to train drivers and control centers.
+- 🧭 Device Location  
+  Each device is assigned a unique ID tied to a predefined map location.
 
-- **Solar Power Supply**  
-  Solar panels charge onboard batteries, enabling autonomous operation in remote areas.
+- ↻ Data Logging  
+  Firebase stores all events with timestamp, battery level, and status.
 
-- **Data Processing**  
-  An ESP32 microcontroller filters false positives and manages data transmission to a cloud platform.
+- 🧭 Tower Tilt Detection  
+  A tilt sensor flags possible physical tampering or toppling.
+
+- ☀️ Autonomous Power  
+  Solar panel charges Li-ion battery via TP4056 module.
 
 ---
 
@@ -47,41 +50,46 @@ The goal is to develop an **IoT-based system** that detects elephants near railw
 
 ### 🛠️ Hardware
 
-- **PIR Sensor**: e.g., HC-SR501
-- **Accelerometer**: e.g., ADXL345
-- **Microcontroller**: e.g., ESP32
-- **GPS Module**: e.g., NEO-6M
-- **Power System**: 10–20W Solar Panel + 3.7V, 2000mAh Li-ion Battery
-- **Enclosure**: Weatherproof box for outdoor deployment
+- ESP32 microcontroller (Wi-Fi enabled)
+- PIR sensor (HC-SR501)
+- Ultrasonic sensor (HC-SR04)
+- Tilt switch sensor
+- 3.7V 2000mAh Li-ion battery
+- TP4056 charging module
+- 20W solar panel
+- Voltage divider circuit (battery monitoring)
+- IP65 waterproof enclosure
 
 ### 💻 Software
 
-- **Firmware** for ESP32 (sensor data processing + communication)
-- **Cloud Platform**: e.g., AWS IoT Core (data storage + alert management)
-- **Notification System**: Mobile App or SMS Gateway for real-time alerts
+- Arduino C++ firmware
+- Firebase Realtime Database
+- Web-based dashboard for real-time map + alerts
 
 ---
 
 ## 📡 Communication Flow
 
-1. Sensors detect elephant movement or tower tampering.
-2. Data is processed by ESP32 microcontroller.
-3. GPS location is attached.
-4. Alert is sent via LoRaWAN.
-5. Cloud platform distributes the alert to appropriate recipients (e.g., control room, train driver).
+1. PIR & Ultrasonic sensors detect elephant presence
+2. ESP32 processes input and determines detection status
+3. ESP32 sends status (e.g. on_track, near_track, clear) to Firebase with device ID and battery level
+4. Firebase updates Web Dashboard in real time
+5. Train control center receives live visual + audio alerts
 
 ---
 
 ## 🔋 Power System
 
-- Solar panel (10–20W)
-- Li-ion rechargeable battery (3.7V, 2000mAh)
-- Ensures 24/7 operation in remote environments
+- 20W Solar Panel (daytime charging)
+- 3.7V 2000mAh Li-ion battery (energy storage)
+- TP4056 module with overcharge/overdischarge protection
+- System designed for 24/7 operation in remote locations
 
 ---
 
-## 📦 Deployment
+## 🛆 Deployment
 
-- Mounted on towers along railway tracks
-- Weatherproof enclosures protect electronic components
-- Units spaced based on detection range (~20m coverage per unit)
+- Devices mounted on towers along railway tracks
+- Each unit has unique ID and location on dashboard
+- Units installed at 20–25 meter intervals for effective coverage
+- Enclosures are fully weather-sealed (IP65 rated)
