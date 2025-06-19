@@ -1,0 +1,16 @@
+#define TILT_PIN D7
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(TILT_PIN, INPUT);
+}
+
+void loop() {
+  int tilt = digitalRead(TILT_PIN);
+  if (tilt == HIGH) {
+    Serial.println(" Tilt Detected!");
+  } else {
+    Serial.println("Stable.");
+  }
+  delay(1000);
+}
