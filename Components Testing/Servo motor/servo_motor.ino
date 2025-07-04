@@ -1,0 +1,27 @@
+#include <Servo.h>
+
+Servo servoMotor;
+
+void setup() {
+  servoMotor.attach(D4); // Connect your servo signal wire to pin 9
+}
+
+void loop() {
+  rotatePIR();  // Call the function to rotate servo
+  delay(1000);  // Wait before repeating the rotation
+}
+
+// Function to rotate servo forward and backward
+void rotatePIR() {
+  // Rotate from 0° to 180°
+  for (int angle = 0; angle <= 180; angle += 5) {
+    servoMotor.write(angle);
+    delay(50);
+  }
+
+  // Rotate back from 180° to 0°
+  for (int angle = 180; angle >= 0; angle -= 5) {
+    servoMotor.write(angle);
+    delay(50);
+  }
+}
