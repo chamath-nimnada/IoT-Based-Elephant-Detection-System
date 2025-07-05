@@ -1,4 +1,19 @@
+Updated code "#include <ESP8266WiFi.h>
+#include <FirebaseESP8266.h>
 #include <Servo.h>
+
+// Wi-Fi credentials
+#define WIFI_SSID "YourWiFiSSID"
+#define WIFI_PASSWORD "YourWiFiPassword"
+
+// Firebase credentials
+#define FIREBASE_HOST "iot-animal-detection-system-default-rtdb.asia-southeast1.firebasedatabase.app"
+#define FIREBASE_AUTH "your_firebase_database_secret"
+
+// Firebase object
+FirebaseData firebaseData;
+
+Servo servoMotor;
 
 // Define pins
 #define TRIG1 D1
@@ -9,11 +24,9 @@
 #define PIR_BACK D8
 #define SERVO_PIN D4
 #define EMITTER_PIN D3
-#define TILT_SENSOR A0  // Analog input for tilt
+#define TILT_SENSOR A0
 
-Servo servoMotor;
-
-// Time tracking
+// Variables
 unsigned long lastFrontMotionTime = 0;
 bool pirFrontActive = true;
 int animalStillDetectedCount = 0;
@@ -21,9 +34,21 @@ const int detectionThreshold = 3;
 const unsigned long NO_MOTION_TIMEOUT = 60000; // 1 minute
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to WiFi");
 
-  // Setup pins
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected to WiFi");
+
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Firebase.reconnectWiFi(true);
+
+  // Pin setup
   pinMode(TRIG1, OUTPUT);
   pinMode(ECHO1, INPUT);
   pinMode(TRIG2, OUTPUT);
@@ -34,130 +59,119 @@ void setup() {
   pinMode(TILT_SENSOR, INPUT);
 
   servoMotor.attach(SERVO_PIN);
-   servoMotor.write(0); 
-         // Set initial position to 0 degrees
-  digitalWrite(EMITTER_PIN, LOW); // Initially off
-
-  Serial.println("System Initialized.");
-  delay(5000);   
+  servoMotor.write(0);
+  digitalWrite(EMITTER_PIN, LOW);
 }
 
-// Read distance from ultrasonic sensor
 long readUltrasonic(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-  return pulseIn(echoPin, HIGH) / 58; // Convert to cm
+  return pulseIn(echoPin, HIGH, 30000) / 58;
 }
 
-// Check if post is fallen using tilt sensor
-void checkTilt() {
-  int tiltValue = analogRead(TILT_SENSOR);
-  if (tiltValue > 300) { // Adjust based on your sensor
-    Serial.println("ALERT: Post is tilted or fallen. Inspect immediately!");
-  }
-}
-
-// Rotate servo for PIR scanning
-void rotatePIR() {
-  for (int angle = 0; angle <= 180; angle += 5) {
-    servoMotor.write(angle);
-    delay(50);
-  }
-  for (int angle = 180; angle >= 0; angle -= 5) {
-    servoMotor.write(angle);
-    delay(50);
-  }
-}
-
-// Check for animal near track (detected behind post)
-void checkPIRBack() {
-  if (digitalRead(PIR_BACK) == HIGH) {
-    Serial.println("Motion detected behind! Animal nearby. Slow down train.");
-    delay(2000);
-  }
-}
-
-// Check for animals on track using ultrasonic + PIR front
-void checkTrackIntrusion(long d1, long d2) {
-  bool frontPIR = digitalRead(PIR_FRONT);
-
-  if (d1 < 25 || d2 < 25) {
-    Serial.println("Obstacle detected within 25cm: An animal came into the track. Slow down the train !");
-    delay(2000);
-  }
-
-  if (frontPIR) {
-    Serial.println("ALERT: STOP TRAIN! Animal is on the track.");
-    delay(2000);
-    digitalWrite(EMITTER_PIN, HIGH); // Turn on ultrasonic sound emitter
-    animalStillDetectedCount = 0;
-
-    for (int i = 0; i < detectionThreshold; i++) {
-      rotatePIR();
-      if (digitalRead(PIR_FRONT) == HIGH) {
-        animalStillDetectedCount++;
-        delay(500);
-      }
-    }
-
-    if (animalStillDetectedCount >= detectionThreshold) {
-      Serial.println("EMERGENCY: Animal not leaving. Immediate STOP required!");
-      delay(2000);
-    } else {
-      Serial.println("Animal moved away. Deactivating emitter.");
-      delay(2000);
-    }
-
-    digitalWrite(EMITTER_PIN, LOW);
-  }
-}
-
-// Monitor PIR front sensor for motion disappearance
-
-
-void readUltrasonicSensors() {
-float distance1 = getDistance(TRIG1, ECHO1);
-float distance2 = getDistance(TRIG2, ECHO2);
-
-
-  Serial.print("Ultrasonic 1 Distance: ");
-  Serial.print(distance1);
-  Serial.println(" cm");
-
-  Serial.print("Ultrasonic 2 Distance: ");
-  Serial.print(distance2);
-  Serial.println(" cm");
-
-  Serial.println("-------------------------");
-  delay(2000);
-}
-
-// 📏 Function to measure distance from an ultrasonic sensor
 float getDistance(int trig, int echo) {
   digitalWrite(trig, LOW);
   delayMicroseconds(2);
   digitalWrite(trig, HIGH);
   delayMicroseconds(10);
   digitalWrite(trig, LOW);
+  long duration = pulseIn(echo, HIGH, 30000);
+  return duration * 0.0343 / 2;
+}
 
-  long duration = pulseIn(echo, HIGH, 30000); // Timeout: 30 ms
-  float distance = duration * 0.0343 / 2;     // Convert to cm
-  return distance;
+void sendToFirebase(float d1, float d2, int tilt, bool pirFront, bool pirBack) {
+  Firebase.setFloat(firebaseData, "/Ultrasonic/Distance1", d1);
+  Firebase.setFloat(firebaseData, "/Ultrasonic/Distance2", d2);
+  Firebase.setInt(firebaseData, "/TiltSensor", tilt);
+  Firebase.setBool(firebaseData, "/PIR/Front", pirFront);
+  Firebase.setBool(firebaseData, "/PIR/Back", pirBack);
+}
+
+void checkTilt(int tiltValue) {
+  if (tiltValue > 300) {
+    Serial.println("ALERT: Post is tilted or fallen.");
+  }
+}
+
+void checkPIRBack(bool pirBack) {
+  if (pirBack) {
+    Serial.println("Motion behind! Animal detected.");
+  }
+}
+
+void checkTrackIntrusion(long d1, long d2, bool frontPIR) {
+  if (d1 < 25 || d2 < 25) {
+    Serial.println("Obstacle within 25cm.");
+  }
+
+  if (frontPIR) {
+    Serial.println("ALERT: STOP TRAIN. Animal detected.");
+    digitalWrite(EMITTER_PIN, HIGH);
+    animalStillDetectedCount = 0;
+
+    for (int i = 0; i < detectionThreshold; i++) {
+      rotatePIRwithSensors();
+      if (digitalRead(PIR_FRONT) == HIGH) {
+        animalStillDetectedCount++;
+      }
+    }
+
+    if (animalStillDetectedCount >= detectionThreshold) {
+      Serial.println("EMERGENCY: Animal not leaving.");
+    } else {
+      Serial.println("Animal moved away.");
+    }
+
+    digitalWrite(EMITTER_PIN, LOW);
+  }
+}
+
+void readUltrasonicSensors() {
+  float distance1 = getDistance(TRIG1, ECHO1);
+  float distance2 = getDistance(TRIG2, ECHO2);
+  int tiltValue = analogRead(TILT_SENSOR);
+  bool pirFront = digitalRead(PIR_FRONT);
+  bool pirBack = digitalRead(PIR_BACK);
+
+  Serial.print("Distance1: ");
+  Serial.print(distance1);
+  Serial.print(" | Distance2: ");
+  Serial.print(distance2);
+  Serial.print(" | Tilt: ");
+  Serial.print(tiltValue);
+  Serial.print(" | PIR Front: ");
+  Serial.print(pirFront);
+  Serial.print(" | PIR Back: ");
+  Serial.println(pirBack);
+
+  // Send to Firebase
+  sendToFirebase(distance1, distance2, tiltValue, pirFront, pirBack);
+
+  checkTilt(tiltValue);
+  checkPIRBack(pirBack);
+  checkTrackIntrusion(distance1, distance2, pirFront);
+
+  delay(1000);
+}
+
+void rotatePIRwithSensors() {
+  for (int angle = 0; angle <= 180; angle += 5) {
+    servoMotor.write(angle);
+    delay(50);
+    readUltrasonicSensors();
+  }
+  for (int angle = 180; angle >= 0; angle -= 5) {
+    servoMotor.write(angle);
+    delay(50);
+    readUltrasonicSensors();
+  }
 }
 
 void loop() {
-  // Read ultrasonic distances
-  long distance1 = readUltrasonic(TRIG1, ECHO1);
-  long distance2 = readUltrasonic(TRIG2, ECHO2);
-
-  // Call all core functions
-  readUltrasonicSensors();
-   checkTilt();
-   checkPIRBack();
-   checkTrackIntrusion(distance1, distance2);
-
-  
+  rotatePIRwithSensors();
+  delay(2000);
 }
+"
